@@ -1,76 +1,74 @@
-import express from "express";
-import mysql from "mysql";
-import cors from "cors";
+import express from 'express';
+import bodyParser from 'body-parser' ;
+import mongoose from 'mongoose';
 
 const app = express();
-app.use(cors());
-app.use(express.json());
 
-const db = mysql.createConnection({
-  host: "localhost",
-  user: "root",
-  password: "Lamadev123",
-  database: "test",
+// Middleware
+app.use(bodyParser.json());
+
+// Connect to MongoDB
+mongoose.connect('mongodb+srv://chami:<password>@chami.2t2tfpv.mongodb.net/test1?retryWrites=true&w=majority&appName=chami', {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
 });
 
-app.get("/", (req, res) => {
-  res.json("hello");
+const db = mongoose.connection;
+db.on('error', console.error.bind(console, 'MongoDB connection error:'));
+
+// Define a schema
+const Schema = mongoose.Schema;
+const ItemSchema = new Schema({
+    name: String,
+    description: String
+});
+const Item = mongoose.model('Item', ItemSchema);
+
+// Routes
+// Create an item
+app.post('/items', (req, res) => {
+    const newItem = new Item(req.body);
+    newItem.save((err, item) => {
+        if (err) return res.status(500).send(err);
+        res.status(201).json(item);
+    });
 });
 
-app.get("/books", (req, res) => {
-  const q = "SELECT * FROM books";
-  db.query(q, (err, data) => {
-    if (err) {
-      console.log(err);
-      return res.json(err);
-    }
-    return res.json(data);
-  });
+// Get all items
+app.get('/items', (req, res) => {
+    Item.find({}, (err, items) => {
+        if (err) return res.status(500).send(err);
+        res.json(items);
+    });
 });
 
-app.post("/books", (req, res) => {
-  const q = "INSERT INTO books(`title`, `desc`, `price`, `cover`) VALUES (?)";
-
-  const values = [
-    req.body.title,
-    req.body.desc,
-    req.body.price,
-    req.body.cover,
-  ];
-
-  db.query(q, [values], (err, data) => {
-    if (err) return res.send(err);
-    return res.json(data);
-  });
+// Get single item by ID
+app.get('/items/:id', (req, res) => {
+    Item.findById(req.params.id, (err, item) => {
+        if (err) return res.status(500).send(err);
+        if (!item) return res.status(404).send('Item not found');
+        res.json(item);
+    });
 });
 
-app.delete("/books/:id", (req, res) => {
-  const bookId = req.params.id;
-  const q = " DELETE FROM books WHERE id = ? ";
-
-  db.query(q, [bookId], (err, data) => {
-    if (err) return res.send(err);
-    return res.json(data);
-  });
+// Update an item
+app.put('/items/:id', (req, res) => {
+    Item.findByIdAndUpdate(req.params.id, req.body, { new: true }, (err, item) => {
+        if (err) return res.status(500).send(err);
+        if (!item) return res.status(404).send('Item not found');
+        res.json(item);
+    });
 });
 
-app.put("/books/:id", (req, res) => {
-  const bookId = req.params.id;
-  const q = "UPDATE books SET `title`= ?, `desc`= ?, `price`= ?, `cover`= ? WHERE id = ?";
-
-  const values = [
-    req.body.title,
-    req.body.desc,
-    req.body.price,
-    req.body.cover,
-  ];
-
-  db.query(q, [...values,bookId], (err, data) => {
-    if (err) return res.send(err);
-    return res.json(data);
-  });
+// Delete an item
+app.delete('/items/:id', (req, res) => {
+    Item.findByIdAndRemove(req.params.id, (err, item) => {
+        if (err) return res.status(500).send(err);
+        if (!item) return res.status(404).send('Item not found');
+        res.json(item);
+    });
 });
 
-app.listen(8800, () => {
-  console.log("Connected to backend.");
-});
+// Start the server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server is running on port ${PORT}`));
