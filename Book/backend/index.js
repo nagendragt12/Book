@@ -1,8 +1,10 @@
 import express from 'express';
 import bodyParser from 'body-parser' ;
 import mongoose from 'mongoose';
+import cors from "cors";
 
 const app = express();
+app.use(cors())
 
 // Middleware
 app.use(bodyParser.json());
@@ -54,17 +56,17 @@ app.get('/books', async (req, res) => {
 
 
 // Get single item by ID
-app.get('/books/:id', async (req, res) => {
+app.get('/books/:bookId', async (req, res) => {
     try {
-        const bookId = req.params.id;
+        const bookId = req.params.bookId;
         // Fetch the book from the database based on the provided ID
-        const book = await Book.findById(bookId);
+        const foundBook = await book.findOne({ bookId: bookId }); // Changed book to book.findOne
         // If the book is not found, return a 404 status code with an error message
-        if (!book) {
+        if (!foundBook) {
             return res.status(404).send('Book not found');
         }
         // If the book is found, send it as a JSON response
-        res.json(book);
+        res.json(foundBook);
     } catch (err) {
         // If an error occurs during the process, log the error and send a 500 status code with an error message
         console.error('Error:', err.message);
@@ -75,20 +77,26 @@ app.get('/books/:id', async (req, res) => {
 
 // Update an item
 
-app.put('/books/:id', async (req, res) => {
+app.put('/books/:bookId', async (req, res) => {
     try {
-        // Import ObjectId from mongoose
-        const ObjectId = mongoose.Types.ObjectId;
+        const bookId = req.params.bookId;
+        
+        // Fetch the book from the database based on the provided ID
+        const foundBook = await book.findOne({ bookId: bookId }); 
 
-        // Check if the provided ID is a valid ObjectId
-        if (!ObjectId.isValid(req.params.id)) {
-            return res.status(400).send('Invalid book ID');
+        // If the book is not found, return a 404 status code with an error message
+        if (!foundBook) {
+            return res.status(404).send('Book not found');
         }
 
-        // Find and update the book
-        const updatedBook = await book.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        // Update the book with the provided data
+        const updatedBook = await book.findOneAndUpdate(
+            { bookId: bookId }, // Query condition
+            req.body, // New data
+            { new: true } // To return the updated document
+        );
 
-        // Check if the book exists
+        // Check if the book was updated successfully
         if (!updatedBook) {
             return res.status(404).send('Book not found');
         }
@@ -102,28 +110,29 @@ app.put('/books/:id', async (req, res) => {
 });
 
 // Delete an item
-app.delete('/books/:id', async (req, res) => {
+app.delete('/books/:bookId', async (req, res) => {
     try {
-        // Import ObjectId from mongoose
-        const ObjectId = mongoose.Types.ObjectId;
+        const bookId = req.params.bookId;
+        
+        // Fetch the book from the database based on the provided ID
+        const foundBook = await book.findOne({ bookId: bookId }); 
 
-        // Check if the provided ID is a valid ObjectId
-        if (!ObjectId.isValid(req.params.id)) {
-            return res.status(400).send('Invalid book ID');
+        // If the book is not found, return a 404 status code with an error message
+        if (!foundBook) {
+            return res.status(404).send('Book not found');
         }
 
-        const deletedBook = await book.findOneAndDelete({ _id: req.params.id });
+        const deletedBook = await book.findOneAndDelete({ bookId: req.params.bookId });
         if (!deletedBook) {
             return res.status(404).send('Book not found');
         }
-        res.json(deletedBook);
+        res.json("Book deleted successfully");
     } catch (err) {
         console.error('Error:', err.message);
         res.status(500).send('Internal Server Error');
     }
 });
 
-
 // Start the server
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 8800;
 app.listen(PORT, () => console.log(`Server is running on port ${PORT}`));

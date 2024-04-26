@@ -1,6 +1,4 @@
-import React from "react";
-import { useEffect } from "react";
-import { useState } from "react";
+import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
 
@@ -19,16 +17,20 @@ const Books = () => {
     fetchAllBooks();
   }, []);
 
-  console.log(books);
-
   const handleDelete = async (id) => {
     try {
       await axios.delete(`http://localhost:8800/books/${id}`);
-      window.location.reload()
+      // Filter out the deleted book from the state
+      setBooks(books.filter(book => book._id !== id)); // Use '_id' instead of 'id'
     } catch (err) {
       console.log(err);
+      // Optionally, display an error message to the user
+      alert("Failed to delete book. Please try again later.");
     }
   };
+
+
+
 
   return (
     <div>
@@ -38,8 +40,9 @@ const Books = () => {
           <div key={book.id} className="book">
             <img src={book.cover} alt="" />
             <h2>{book.title}</h2>
-            <p>{book.desc}</p>
+            <p>{book.description}</p>
             <span>${book.price}</span>
+            {/* Pass the correct book id to handleDelete */}
             <button className="delete" onClick={() => handleDelete(book.id)}>Delete</button>
             <button className="update">
               <Link
